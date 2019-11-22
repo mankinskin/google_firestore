@@ -139,7 +139,7 @@ pub trait Delegate: Send {
     /// The matching `finished()` call will always be made, no matter whether or not the API
     /// request was successful. That way, the delegate may easily maintain a clean state
     /// between various API calls.
-    fn begin(&mut self, MethodInfo) {}
+    fn begin(&mut self, _: MethodInfo) {}
 
     /// Called whenever there is an [HttpError](http://hyperium.github.io/hyper/hyper/error/enum.HttpError.html), usually if there are network problems.
     ///
@@ -147,7 +147,7 @@ pub trait Delegate: Send {
     /// [exponential backoff algorithm](http://en.wikipedia.org/wiki/Exponential_backoff).
     ///
     /// Return retry information.
-    fn http_error(&mut self, &hyper::Error) -> Retry {
+    fn http_error(&mut self, _: &hyper::Error) -> Retry {
         Retry::Abort
     }
 
@@ -210,7 +210,7 @@ pub trait Delegate: Send {
     ///
     /// If you choose to retry after a duration, the duration should be chosen using the
     /// [exponential backoff algorithm](http://en.wikipedia.org/wiki/Exponential_backoff).
-    fn http_failure(&mut self, _: &hyper::client::Response, Option<JsonServerError>, _: Option<ServerError>) -> Retry {
+    fn http_failure(&mut self, _: &hyper::client::Response, _: Option<JsonServerError>, _: Option<ServerError>) -> Retry {
         Retry::Abort
     }
 
@@ -303,16 +303,16 @@ impl Display for Error {
                 writeln!(f, "It is used as there are no Scopes defined for this method.")
             },
             Error::BadRequest(ref err) => {
-                try!(writeln!(f, "Bad Request ({}): {}", err.error.code, err.error.message));
+                writeln!(f, "Bad Request ({}): {}", err.error.code, err.error.message)?;
                 for err in err.error.errors.iter() {
-                    try!(writeln!(f, "    {}: {}, {}{}",
+                    writeln!(f, "    {}: {}, {}{}",
                                             err.domain,
                                             err.message,
                                             err.reason,
                                             match &err.location {
                                                 &Some(ref loc) => format!("@{}", loc),
                                                 &None => String::new(),
-                                            }));
+                                            })?;
                 }
                 Ok(())
             },
@@ -569,10 +569,10 @@ impl Header for ContentRange {
 
 impl HeaderFormat for ContentRange {
     fn fmt_header(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(fmt.write_str("bytes "));
+        fmt.write_str("bytes ")?;
         match self.range {
-            Some(ref c) => try!(c.fmt(fmt)),
-            None => try!(fmt.write_str("*"))
+            Some(ref c) => c.fmt(fmt)?,
+            None => fmt.write_str("*")?
         }
         (write!(fmt, "/{}", self.total_length)).ok();
         Ok(())
